@@ -250,8 +250,8 @@ def merge_level_ranges(level_set):
 # Main
 # -------------------------------
 if __name__ == "__main__":
-    input_file = "wild_encounters.h"
-    output_file = "encounter_data.json"
+    input_file = "../data/wild_encounters.h"
+    output_file = "../encounter_data.json"
 
     data = parse_file(input_file)
     data = merge_versions(data)
