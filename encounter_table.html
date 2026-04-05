@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Wild Encounter Table</title>
+<style>
+body { font-family: Arial; margin: 20px; }
+input, select { margin: 5px; padding: 5px; }
+table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+th, td { border: 1px solid #ccc; padding: 6px; text-align: left; cursor: pointer; }
+th { background-color: #f4f4f4; }
+.tab { display:inline-block; padding:8px 12px; margin-right:5px; border:1px solid #ccc; cursor:pointer; }
+.tab.active { background:#ddd; }
+</style>
+</head>
+<body>
+
+<h2>Wild Encounter Table</h2>
+
+<!-- Tabs -->
+<div id="tabs">
+  <div class="tab active" data-type="All">All</div>
+  <div class="tab" data-type="Grass">Grass</div>
+  <div class="tab" data-type="Surfing">Surfing</div>
+  <div class="tab" data-type="Fishing">Fishing</div>
+  <div class="tab" data-type="Rock Smash">Rock Smash</div>
+</div>
+
+<input type="text" id="locationFilter" placeholder="Search by location...">
+<input type="text" id="speciesFilter" placeholder="Search by species...">
+<label for="versionFilter">Version:</label>
+<select id="versionFilter">
+  <option value="All">All</option>
+</select>
+
+<table id="encounterTable">
+<thead>
+<tr>
+<th data-sort="location">Location</th>
+<th data-sort="type">Type</th>
+<th data-sort="species">Species</th>
+<th data-sort="level">Level</th>
+<th data-sort="rate">Rate (%)</th>
+<th data-sort="version">Version</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+
+<script>
+let encounterData = [];
+let currentType = "All";
+let sortKey = null;
+let sortAsc = true;
+
+const tbody = document.querySelector("#encounterTable tbody");
+const locationFilter = document.getElementById("locationFilter");
+const speciesFilter = document.getElementById("speciesFilter");
+const versionFilter = document.getElementById("versionFilter");
+
+function render(data) {
+  tbody.innerHTML = "";
+  data.forEach(r => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${r.location}</td>
+      <td>${r.type}</td>
+      <td>${r.species}</td>
+      <td>${r.level}</td>
+      <td>${r.rate}</td>
+      <td>${r.version}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function applyFilters() {
+  const loc = locationFilter.value.toLowerCase();
+  const sp = speciesFilter.value.toLowerCase();
+  const ver = versionFilter.value;
+
+  let filtered = encounterData.filter(e =>
+    e.location.toLowerCase().includes(loc) &&
+    e.species.toLowerCase().includes(sp) &&
+    (currentType === "All" || e.type.includes(currentType)) &&
+    (ver === "All" || e.version === ver)
+  );
+
+  if (sortKey) {
+    filtered.sort((a,b)=>{
+      let va=a[sortKey], vb=b[sortKey];
+      if(sortKey==="rate") return sortAsc?va-vb:vb-va;
+      return sortAsc?String(va).localeCompare(String(vb)):String(vb).localeCompare(String(va));
+    });
+  }
+
+  render(filtered);
+}
+
+// Populate version dropdown dynamically
+function populateVersions() {
+  const versions = [...new Set(encounterData.map(e => e.version))].sort();
+  versionFilter.innerHTML = `<option value="All">All</option>` +
+    versions.map(v => `<option value="${v}">${v}</option>`).join('');
+}
+
+// Filters
+versionFilter.onchange = applyFilters; // Call applyFilters when version changes
+locationFilter.oninput = applyFilters;
+speciesFilter.oninput = applyFilters;
+
+// Tabs
+for (const tab of document.querySelectorAll(".tab")) {
+  tab.onclick = () => {
+    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+    tab.classList.add("active");
+    currentType = tab.dataset.type;
+    applyFilters();
+  };
+}
+
+// Sorting
+for (const th of document.querySelectorAll("th")) {
+  th.onclick = () => {
+    const key = th.dataset.sort;
+    if (!key) return;
+    if (sortKey === key) sortAsc = !sortAsc;
+    else { sortKey = key; sortAsc = true; }
+    applyFilters();
+  };
+}
+
+// Fetch external JSON
+fetch("encounter_data.json")
+  .then(response => response.json())
+  .then(data => {
+    encounterData = data;
+    populateVersions(); // Populate version dropdown
+    render(encounterData); // Render table
+  })
+  .catch(err => console.error("Error loading encounter data:", err));
+</script>
+
+</body>
+</html>
