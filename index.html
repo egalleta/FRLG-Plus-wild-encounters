@@ -58,6 +58,14 @@ const locationFilter = document.getElementById("locationFilter");
 const speciesFilter = document.getElementById("speciesFilter");
 const versionFilter = document.getElementById("versionFilter");
 
+function getLevelStart(levelStr) {
+  // Handles:
+  // "5" → 5
+  // "5-10" → 5
+  // "5-10/20-30" → 5
+  return parseInt(levelStr.split(/[\/-]/)[0], 10);
+}
+
 function render(data) {
   tbody.innerHTML = "";
   data.forEach(r => {
@@ -85,13 +93,29 @@ function applyFilters() {
     (ver === "All" || e.version === ver)
   );
 
-  if (sortKey) {
-    filtered.sort((a,b)=>{
-      let va=a[sortKey], vb=b[sortKey];
-      if(sortKey==="rate") return sortAsc?va-vb:vb-va;
-      return sortAsc?String(va).localeCompare(String(vb)):String(vb).localeCompare(String(va));
-    });
-  }
+    if (sortKey) {
+        filtered.sort((a, b) => {
+            let va = a[sortKey];
+            let vb = b[sortKey];
+
+            if (sortKey === "rate") {
+                return sortAsc ? va - vb : vb - va;
+            }
+            if (sortKey === "level") {
+                const [aStart, aEnd] = va.split(/[\/-]/).map(Number);
+                const [bStart, bEnd] = vb.split(/[\/-]/).map(Number);
+
+                if (aStart !== bStart) 
+                    return sortAsc ? aStart - bStart : bStart - aStart;
+                
+                return sortAsc ? aEnd - bEnd : bEnd - aEnd;
+            }
+
+            return sortAsc
+                ? String(va).localeCompare(String(vb))
+                : String(vb).localeCompare(String(va));
+        });
+    }
 
   render(filtered);
 }
